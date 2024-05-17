@@ -1,0 +1,84 @@
+<template>
+  <div class="page">
+    <div class="navbar">
+      <div class="navbar-bg"></div>
+      <div class="navbar-inner sliding">
+        <div class="title">Geminiチャット</div>
+      </div>
+    </div>
+    <div class="toolbar messagebar">
+      <div class="toolbar-inner">
+        <div class="messagebar-area">
+          <textarea class="resizable" placeholder="Message" id="message"></textarea>
+        </div>
+        <a class="link send-link" href="#" @click=${send}>Send</a>
+      </div>
+    </div>
+    <div class="page-content">
+        <div class="page-content messages-content">
+            <div class="messages">
+                ${ messages.map(message => $h`
+                    <div class="message message-${message.role === 'user' ? 'sent' : 'received'}">
+                        <div class="message-content">
+                        <!-- テキストの入った泡 -->
+                        <div class="message-bubble">
+                            <div class="message-text">${message.message}</div>
+                        </div>
+                        </div>
+                    </div>
+                `)}
+            </div>
+        </div>
+    </div>
+  </div>
+</template>
+<script>
+export default function (props, {$f7, $on, $update, $onMounted }) {
+    const messages = [
+    ];
+
+    let chat;
+    // チャットオブジェクトの作成
+    $onMounted(() => {
+        setTimeout(function(){
+          chat = window.geminiModel.startChat({
+            history: [],
+            generationConfig: {
+                maxOutputTokens: 10000,
+            },
+          });
+        },1500)      
+    });
+
+    // メッセージを送信する処理
+    const send = async (e) => {
+        // 入力メッセージの組み立て
+        const message = document.querySelector('#message');
+        const text = message.value;
+        if (text === '') return;
+        messages.push({
+            role: 'user',
+            message: text,
+        });
+        $update(); // 表示更新
+        // Geminiのレスポンスを受け取る
+        const response = await answer(text);
+        messages.push({
+            role: 'system',
+            message: response,
+        });
+        message.value = '';
+        $update(); // 画面表示更新
+    };
+
+    // メッセージを投げて、Geminiのレスポンスを受け取る処理
+    // https://ai.google.dev/tutorials/web_quickstart?hl=ja
+    const answer = async (text) => {
+        const result = await chat.sendMessage(text);
+        const response = await result.response;
+        return response.text();
+    };
+
+    return $render;
+}
+</script>
